@@ -16,11 +16,14 @@ Parameters:
     Type: String
   CertificateArn:
     Type: String
+  CounterTableName:
+    Type: String
+    Default: my_counter
 Resources:
   CounterTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: my_counter
+      TableName: !Ref CounterTableName
       AttributeDefinitions:
         - AttributeName: pkey
           AttributeType: S
