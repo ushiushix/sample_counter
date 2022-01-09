@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  counter
+
+  Simple counter page
+
+Globals:
+  Function:
+    Timeout: 3
+
+Parameters:
+  DomainName:
+    Type: String
+  HostedZoneId:
+    Type: String
+  CertificateArn:
+    Type: String
+Resources:
+  CounterTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: my_counter
+      AttributeDefinitions:
+        - AttributeName: pkey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pkey
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+  CounterApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Domain:
+        CertificateArn: !Ref CertificateArn
+        DomainName: !Sub counter.${DomainName}
+        Route53:
+          HostedZoneId: !Ref HostedZoneId
+  CounterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: counter/
+      Handler: app.lambda_handler
+      Runtime: ruby2.7
+      Environment:
+        Variables:
+          COUNTER_TABLE_NAME: !Ref CounterTable
+      Policies:
+        - AWSLambdaExecute
+        - Version: '2012-10-17' 
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:*
+              Resource: !GetAtt CounterTable.Arn
+      Events:
+        Counter:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+            RestApiId: !Ref CounterApi
+
+Outputs:
+  CounterURI:
+    Description: "API Gateway endpoint URL for Prod stage for Counter function"
+    Value: !Sub "https://${CounterApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  CounterAliasURI:
+    Description: "URI using custom URI"
+    Value: !Sub "https://counter.${DomainName}/"
